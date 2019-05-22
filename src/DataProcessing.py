@@ -51,10 +51,10 @@ def audio_segmentation(wav_dir, filter_num, speaker_emo, impro_or_script):
     wav_num = len(wav_dir)
 
     if impro_or_script == 0:
-        data = np.empty((4642, 300, filter_num, 3), dtype=np.float32)
+        data = np.empty((4642, 3, 300, filter_num), dtype=np.float32)
         label = np.empty((4642, 1), dtype=np.int8)
     else:
-        data = np.empty((4199, 300, filter_num, 3), dtype=np.float32)
+        data = np.empty((4199, 3, 300, filter_num), dtype=np.float32)
         label = np.empty((4199, 1), dtype=np.int8)
 
     data_num = 0
@@ -83,9 +83,9 @@ def audio_segmentation(wav_dir, filter_num, speaker_emo, impro_or_script):
                 delta2 = np.pad(delta2, ((0, 300 - delta_deltas.shape[0]), (0, 0)),
                               'constant', constant_values=0)
 
-                data[data_num, :, :, 0] = part
-                data[data_num, :, :, 1] = delta1
-                data[data_num, :, :, 2] = delta2
+                data[data_num, 0, :, :] = part
+                data[data_num, 1, :, :] = delta1
+                data[data_num, 2, :, :] = delta2
 
                 emo_label = generate_label(emotion)
                 label[data_num] = emo_label
@@ -102,17 +102,17 @@ def audio_segmentation(wav_dir, filter_num, speaker_emo, impro_or_script):
                 delta21 = delta_deltas[0:300, :]
                 delta22 = delta_deltas[wav_time-300:wav_time, :]
 
-                data[data_num, :, :, 0] = part1
-                data[data_num, :, :, 1] = delta11
-                data[data_num, :, :, 2] = delta21
+                data[data_num, 0, :, :] = part1
+                data[data_num, 1, :, :] = delta11
+                data[data_num, 2, :, :] = delta21
 
                 emo_label = generate_label(emotion)
                 label[data_num] = emo_label
                 data_num += 1
 
-                data[data_num, :, :, 0] = part2
-                data[data_num, :, :, 1] = delta12
-                data[data_num, :, :, 2] = delta22
+                data[data_num, 0, :, :] = part2
+                data[data_num, 1, :, :] = delta12
+                data[data_num, 2, :, :] = delta22
 
                 emo_label = generate_label(emotion)
                 label[data_num] = emo_label
@@ -152,29 +152,35 @@ def input_normalization(train_data, valid_data, test_data, filter_num):
     :param filter_num:
     :return:
     '''
-    train_data = train_data.reshape((-1, filter_num, 3))
-    valid_data = valid_data.reshape((-1, filter_num, 3))
-    test_data = test_data.reshape((-1, filter_num, 3))
+    # train_data = train_data.reshape((-1, filter_num, 3))
+    # valid_data = valid_data.reshape((-1, filter_num, 3))
+    # test_data = test_data.reshape((-1, filter_num, 3))
 
     data_mean = {}
     data_std = {}
 
-    data_mean['static'] = np.mean(train_data[:, :, 0], axis=0)
-    data_mean['deltas'] = np.mean(train_data[:, :, 1], axis=0)
-    data_mean['delta-deltas'] = np.mean(train_data[:, :, 2], axis=0)
+    data_mean['static'] = np.mean(train_data[:, 0, :, :].reshape(-1, filter_num),
+                                  axis=0)
+    data_mean['deltas'] = np.mean(train_data[:, 1, :, :].reshape(-1, filter_num),
+                                  axis=0)
+    data_mean['delta-deltas'] = np.mean(train_data[:, 2, :, :].reshape(-1, filter_num),
+                                        axis=0)
 
-    data_std['static'] = np.std(train_data[:, :, 0], axis=0)
-    data_std['deltas'] = np.std(train_data[:, :, 1], axis=0)
-    data_std['delta-deltas'] = np.std(train_data[:, :, 2], axis=0)
+    data_std['static'] = np.std(train_data[:, 0, :, :].reshape(-1, filter_num),
+                                axis=0)
+    data_std['deltas'] = np.std(train_data[:, 1, :, :].reshape(-1, filter_num),
+                                axis=0)
+    data_std['delta-deltas'] = np.std(train_data[:, 2, :, :].reshape(-1, filter_num),
+                                      axis=0)
 
     for i, key in enumerate(data_mean):
-        train_data[:, :, i] = (train_data[:, :, i] - data_mean[key]) / (data_std[key] + eps)
-        valid_data[:, :, i] = (valid_data[:, :, i] - data_mean[key]) / (data_std[key] + eps)
-        test_data[:, :, i] = (test_data[:, :, i] - data_mean[key]) / (data_std[key] + eps)
+        train_data[:, i, :, :] = (train_data[:, i, :, :] - data_mean[key]) / (data_std[key] + eps)
+        valid_data[:, i, :, :] = (valid_data[:, i, :, :] - data_mean[key]) / (data_std[key] + eps)
+        test_data[:, i, :, :] = (test_data[:, i, :, :] - data_mean[key]) / (data_std[key] + eps)
 
-    train_data = train_data.reshape((-1, 300, filter_num, 3))
-    valid_data = valid_data.reshape((-1, 300, filter_num, 3))
-    test_data = test_data.reshape((-1, 300, filter_num, 3))
+    # train_data = train_data.reshape((-1, 300, filter_num, 3))
+    # valid_data = valid_data.reshape((-1, 300, filter_num, 3))
+    # test_data = test_data.reshape((-1, 300, filter_num, 3))
 
     return train_data, valid_data, test_data
 
