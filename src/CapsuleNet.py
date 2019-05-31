@@ -16,6 +16,15 @@ eps = 1e-7
 EPOCHS = 200
 BATCH_SIZE = 64
 
+np.set_printoptions(formatter={'float': '{:6.2%}'.format})
+
+
+def get_percentage(confusion):
+    # get the percentage of confusion matrix values
+    true_class_num = np.expand_dims(np.sum(confusion, axis=1), axis=-1)
+
+    return confusion / true_class_num
+
 
 def softmax(input, dim=1):
     transposed_input = input.transpose(dim, len(input.size()) - 1)
@@ -256,6 +265,7 @@ def load_data(in_dir):
 def train(capsNet, optimizer, scheduler, loss_func, train_loader, valid_loader):
 
     for epoch in range(1, EPOCHS + 1):
+
         train_loss = 0.
         train_result = []
         train_label = []
@@ -291,6 +301,7 @@ def train(capsNet, optimizer, scheduler, loss_func, train_loader, valid_loader):
                 train_unweighted_accuracy = unweighted_accuracy(train_result, train_label)
                 train_confusion = confusion(train_label, train_result,
                                             labels=list(range(4)))
+                train_confusion = get_percentage(train_confusion)
 
                 train_loss /= len(train_loader)
 
@@ -304,7 +315,7 @@ def train(capsNet, optimizer, scheduler, loss_func, train_loader, valid_loader):
 
 
         if epoch % 10 == 0:
-            torch.save(capsNet, '../model/model_{:0>2}.pkl'.format(epoch))
+            torch.save(capsNet, f'../model/model_{epoch:0>2}.pkl')
             print('save the intermediate model successfully')
 
             capsNet.eval()
@@ -335,6 +346,7 @@ def train(capsNet, optimizer, scheduler, loss_func, train_loader, valid_loader):
                 valid_unweighted_accuracy = unweighted_accuracy(valid_result, valid_label)
                 valid_confusion = confusion(valid_label, valid_result,
                                             labels=list(range(4)))
+                valid_confusion = get_percentage(valid_confusion)
 
                 valid_loss /= len(valid_loader)
 
@@ -377,6 +389,7 @@ def test(capsNet, loss_func, test_loader):
         test_unweighted_accuracy = unweighted_accuracy(test_result, test_label)
         test_confusion = confusion(test_label, test_result,
                                     labels=list(range(4)))
+        test_confusion = get_percentage(test_confusion)
 
         test_loss /= len(test_loader)
 
@@ -400,6 +413,35 @@ def weighted_accuracy(y_true, y_pred):
     return (y_true == y_pred).float().mean()
 
 
+# def test_model(capsNet, test_loader):
+#     test_result = []
+#     test_label = []
+#     capsNet.eval()
+#     with torch.no_grad():
+#         for batch_test_x, batch_test_y in test_loader:
+#             batch_test_x = batch_test_x.cuda()
+#             batch_test_y = batch_test_y.cuda()
+#
+#             test_pred = capsNet(batch_test_x)
+#
+#             test_pred = torch.argmax(test_pred, dim=1)
+#
+#             test_result.extend(test_pred.cpu())
+#             test_label.extend(batch_test_y.cpu())
+#
+#         test_result = torch.tensor(test_result)
+#         test_label = torch.tensor(test_label)
+#
+#         test_weighted_accuracy = weighted_accuracy(test_result, test_label)
+#         test_unweighted_accuracy = unweighted_accuracy(test_result, test_label)
+#         test_confusion = confusion(test_label, test_result,
+#                                     labels=list(range(4)))
+#         test_confusion = get_percentage(test_confusion)
+#
+#         print(f'| test weighted accuracy: {test_weighted_accuracy.item():.2%}',
+#               f'| test unweighted accuracy: {test_unweighted_accuracy.item():.2%}',
+#               '\ntest confusion matrix:[hap, sad, ang, neu]\n', test_confusion)
+
 if __name__ == '__main__':
     start = time.time()
     capsNet = CapsuleNet()
@@ -409,22 +451,21 @@ if __name__ == '__main__':
 
     print('# parameters:', sum(param.numel() for param in capsNet.parameters()))
 
-    # # Use L2 normalization
-    # weight_p, bias_p = [], []
-    # for name, p in capsNet.named_parameters():
-    #     if 'bias' in name:
-    #         bias_p += [p]
-    #     else:
-    #         weight_p += [p]
-    #
-    #
-    # optimizer = torch.optim.Adam([
-    #     {'params': weight_p, 'weight_decay': 0.1},
-    #     {'params': bias_p, 'weight_decay': 0}
-    #     ], lr=LR)
+    # Use L2 normalization
+    weight_p, bias_p = [], []
+    for name, p in capsNet.named_parameters():
+        if 'bias' in name:
+            bias_p += [p]
+        else:
+            weight_p += [p]
+
+    optimizer = torch.optim.Adam([
+        {'params': weight_p, 'weight_decay': 0.01},
+        {'params': bias_p, 'weight_decay': 0}
+        ], lr=LR)
 
     optimizer = torch.optim.Adam(capsNet.parameters(), lr=LR)
-    scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[100, 150], gamma=0.1)
+    scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[180], gamma=0.1)
 
     loss_func = nn.CrossEntropyLoss()
 
@@ -436,3 +477,10 @@ if __name__ == '__main__':
 
     end = time.time()
     print(f'总用时：{(end - start) / 60:.2f}mins')
+
+    # for i in range(10, 210, 10):
+    #     capsNet = torch.load(f'../model/model_{i}.pkl')
+    #
+    #     print(f'-------------------------------Epoch: {i}')
+    #
+    #     test_model(capsNet, test_loader)
