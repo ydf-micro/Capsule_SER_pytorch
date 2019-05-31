@@ -413,35 +413,6 @@ def weighted_accuracy(y_true, y_pred):
     return (y_true == y_pred).float().mean()
 
 
-# def test_model(capsNet, test_loader):
-#     test_result = []
-#     test_label = []
-#     capsNet.eval()
-#     with torch.no_grad():
-#         for batch_test_x, batch_test_y in test_loader:
-#             batch_test_x = batch_test_x.cuda()
-#             batch_test_y = batch_test_y.cuda()
-#
-#             test_pred = capsNet(batch_test_x)
-#
-#             test_pred = torch.argmax(test_pred, dim=1)
-#
-#             test_result.extend(test_pred.cpu())
-#             test_label.extend(batch_test_y.cpu())
-#
-#         test_result = torch.tensor(test_result)
-#         test_label = torch.tensor(test_label)
-#
-#         test_weighted_accuracy = weighted_accuracy(test_result, test_label)
-#         test_unweighted_accuracy = unweighted_accuracy(test_result, test_label)
-#         test_confusion = confusion(test_label, test_result,
-#                                     labels=list(range(4)))
-#         test_confusion = get_percentage(test_confusion)
-#
-#         print(f'| test weighted accuracy: {test_weighted_accuracy.item():.2%}',
-#               f'| test unweighted accuracy: {test_unweighted_accuracy.item():.2%}',
-#               '\ntest confusion matrix:[hap, sad, ang, neu]\n', test_confusion)
-
 if __name__ == '__main__':
     start = time.time()
     capsNet = CapsuleNet()
