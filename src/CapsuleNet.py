@@ -422,18 +422,18 @@ if __name__ == '__main__':
 
     print('# parameters:', sum(param.numel() for param in capsNet.parameters()))
 
-    # Use L2 normalization
-    weight_p, bias_p = [], []
-    for name, p in capsNet.named_parameters():
-        if 'bias' in name:
-            bias_p += [p]
-        else:
-            weight_p += [p]
-
-    optimizer = torch.optim.Adam([
-        {'params': weight_p, 'weight_decay': 0.01},
-        {'params': bias_p, 'weight_decay': 0}
-        ], lr=LR)
+    # # Use L2 normalization
+    # weight_p, bias_p = [], []
+    # for name, p in capsNet.named_parameters():
+    #     if 'bias' in name:
+    #         bias_p += [p]
+    #     else:
+    #         weight_p += [p]
+    #
+    # optimizer = torch.optim.Adam([
+    #     {'params': weight_p, 'weight_decay': 0.01},
+    #     {'params': bias_p, 'weight_decay': 0}
+    #     ], lr=LR)
 
     optimizer = torch.optim.Adam(capsNet.parameters(), lr=LR)
     scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[180], gamma=0.1)
